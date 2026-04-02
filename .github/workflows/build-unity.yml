@@ -1,0 +1,208 @@
+name: Build Unity Project
+
+# --- トリガー設定 ---
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      build_target:
+        description: 'Target Platform'
+        required: true
+        default: 'StandaloneWindows64'
+        type: choice
+        options:
+          - StandaloneWindows64
+          - WebGL
+          - Android
+
+# --- Concurrency設定 ---
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # --- テストジョブ ---
+  test:
+    name: Run Unity Tests
+    runs-on: ubuntu-latest
+    steps:
+      # ディスク容量の解放 (ビルド前の空き容量確保)
+      - name: Free Disk Space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDATA/_cache/BinaryData/Azure"
+          # 必要に応じて追加の削除コマンドを実行
+
+      # チェックアウト（LFSを有効化）
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+      
+      
+      # LFSのキャッシュ（資産変更がない場合にスキップ）
+      - name: Create LFS file list
+        run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
+
+      - name: Restore LFS cache
+        uses: actions/cache@v4
+        with:
+          path: .git/lfs
+          key: lfs-${{ hashFiles('.lfs-assets-id') }}
+          restore-keys: lfs-
+
+      - name: Git LFS Pull
+        run: git lfs pull
+
+      # Unityバージョンとフォルダハッシュの抽出（ハッシュ取得ステップ）
+      - name: Get Unity Version and Project Hash
+        id: project_info
+        run: |
+          # ProjectVersion.txt からバージョンを抽出（例: 2022.3.15f1）
+          VERSION=$(grep 'm_EditorVersion:' ProjectSettings/ProjectVersion.txt | awk '{print $2}')
+          echo "unity_version=$VERSION" >> $GITHUB_OUTPUT
+          # キャッシュキー用に設定ファイルのハッシュを生成
+          HASH=${{ hashFiles('ProjectSettings/*.asset', 'Packages/manifest.json') }}
+          echo "project_hash=$HASH" >> $GITHUB_OUTPUT
+
+      # Libraryフォルダのキャッシュ（上記ステップで取得したバージョンをキーに使用）
+      - name: Cache Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-${{ steps.project_info.outputs.unity_version }}-${{ steps.project_info.outputs.project_hash }}
+          restore-keys: |
+            Library-${{ steps.project_info.outputs.unity_version }}-
+            Library-
+
+      # テスト実行
+      - name: Run Tests
+        uses: game-ci/unity-test-runner@v4
+        id: tests
+        env:
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          # Unityプロジェクトのrootを設定
+          projectPath: Project_Idea
+          # EditMode と PlayMode 両方を実行
+          testMode: all
+          # テスト結果の出力先
+          artifactsPath: artifacts
+      
+      # テスト結果のアップロード
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always() # テストが失敗してもレポートをアップロードする
+        with:
+          name: Test-Results
+          path: artifacts
+        
+      # ライセンスの返却 (テスト成否に関わらず実行)
+      - name: Unity - Return License
+        uses: game-ci/unity-return-license@v2
+        if: always()
+        env:
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+
+  # --- ビルドジョブ ---
+  build:
+    name: Build Project
+    needs: test # テストが成功した場合のみ実行
+    runs-on: ubuntu-latest
+    steps:
+      # ディスク容量の解放 (ビルド前の空き容量確保)
+      - name: Free Disk Space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDATA/_cache/BinaryData/Azure"
+          # 必要に応じて追加の削除コマンドを実行
+
+      # チェックアウト（LFSを有効化）
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+      
+      
+      # LFSのキャッシュ（資産変更がない場合にスキップ）
+      - name: Create LFS file list
+        run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
+
+      - name: Restore LFS cache
+        uses: actions/cache@v4
+        with:
+          path: .git/lfs
+          key: lfs-${{ hashFiles('.lfs-assets-id') }}
+          restore-keys: lfs-
+
+      - name: Git LFS Pull
+        run: git lfs pull
+
+      # Unityバージョンとフォルダハッシュの抽出（ハッシュ取得ステップ）
+      - name: Get Unity Version and Project Hash
+        id: project_info
+        run: |
+          # ProjectVersion.txt からバージョンを抽出（例: 2022.3.15f1）
+          VERSION=$(grep 'm_EditorVersion:' ProjectSettings/ProjectVersion.txt | awk '{print $2}')
+          echo "unity_version=$VERSION" >> $GITHUB_OUTPUT
+          # キャッシュキー用に設定ファイルのハッシュを生成
+          HASH=${{ hashFiles('ProjectSettings/*.asset', 'Packages/manifest.json') }}
+          echo "project_hash=$HASH" >> $GITHUB_OUTPUT
+
+      # Libraryフォルダのキャッシュ（上記ステップで取得したバージョンをキーに使用）
+      - name: Cache Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-${{ steps.project_info.outputs.unity_version }}-${{ steps.project_info.outputs.project_hash }}
+          restore-keys: |
+            Library-${{ steps.project_info.outputs.unity_version }}-
+            Library-
+
+      # Unityビルドの実行
+      - name: Unity - Builder
+        uses: game-ci/unity-builder@v4
+        id: unity_build # 後続で参照するためにIDを付与
+        env:
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          # Unityプロジェクトのrootを設定
+          projectPath: Project_Idea
+          unityVersion: auto # または取得した変数
+          targetPlatform: ${{ inputs.build_target || 'StandaloneWindows64' }}
+          allowDirtyBuild: true
+
+      # ライセンスの返却 (ビルド成否に関わらず実行)
+      - name: Unity - Return License
+        uses: game-ci/unity-return-license@v2
+        if: always()
+        env:
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+
+      #成果物のアップロード
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: Build-${{ inputs.build_target || 'StandaloneWindows64' }}
+          path: build

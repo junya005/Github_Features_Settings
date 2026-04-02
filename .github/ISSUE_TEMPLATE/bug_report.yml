@@ -1,0 +1,75 @@
+name: 🐛 バグ報告
+description: ゲームの不具合やエラーを報告します
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        バグ報告ありがとうございます！問題をスムーズに解決・再現するため、以下のフォームに沿ってご記入をお願いします。
+
+  - type: input
+    id: overview
+    attributes:
+      label: 🐛 バグの概要
+      description: どのようなバグが発生したのか、1〜2行で簡潔に記載してください。
+      placeholder: 例：同時押しノーツの判定が片方しか処理されない
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 🔄 再現手順
+      description: バグを発生させるための具体的な手順を番号順に記載してください。
+      placeholder: |
+        1. メインメニューから「楽曲選択」を開く
+        2. 〇〇の楽曲をスタートする
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: ✅ 期待される挙動
+      description: 本来はどのような動作になるのが正しい（仕様である）か記載してください。
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: ❌ 実際の挙動
+      description: 現状、どのような誤った動作になっているか記載してください。（エラーログがあれば併記してください）
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: 🖥 発生環境
+      description: バグが確認されたOSや端末、Unityのバージョンなどを記載してください。
+      placeholder: 例：Windows 11 / Unity 2022.3.x / キーボード操作
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: 🚨 優先度・深刻度
+      description: バグの深刻度を選択してください。
+      options:
+        - "🔴 High: 進行不能、クラッシュ、ゲームの根幹に関わる致命的なバグ"
+        - "🟡 Medium: プレイは可能だが、明らかに不自然な挙動やUIの崩れ"
+        - "🟢 Low: 軽微な表示バグ、プレイに支障のない不具合"
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 📸 スクリーンショット / 動画
+      description: 視覚的にわかるバグの場合、ここに画像や動画をドラッグ＆ドロップしてください。
+    validations:
+      required: false

@@ -1,0 +1,45 @@
+name: ✨ 新機能依頼
+description: ゲームへの新しいアイデアや機能追加の提案をします
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        アイデアの提案ありがとうございます！実装をスムーズに検討するため、目的や詳細を教えてください。
+
+  - type: input
+    id: goal
+    attributes:
+      label: 🎯 概要
+      description: 追加したい機能の概要を1〜2行で記載してください。
+      placeholder: 例：リズムゲームにおけるロングノーツ機能の実装
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 📝 背景・理由
+      description: なぜその機能が必要だと感じましたか？現状の課題や、追加することでどう良くなるかを記載してください。
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: 💡 機能の具体的な詳細
+      description: その機能がどのように動作するべきか、UIのイメージや仕様のアイデアがあれば詳細に記載してください。
+      placeholder: |
+        - 画面を長押しすることで継続的にスコアを獲得できる
+        - 離したタイミングで最終判定を行う
+    validations:
+      required: true
+
+  - type: textarea
+    id: references
+    attributes:
+      label: 🔗 関連情報・メモ
+      description: 参考になる他のゲームの機能や、関連する資料があれば記載してください。
+    validations:
+      required: false
