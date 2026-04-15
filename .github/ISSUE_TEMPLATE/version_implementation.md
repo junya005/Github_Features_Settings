@@ -1,3 +1,11 @@
+---
+name: Version Implementation
+about: バージョン実装内容のテンプレート
+title: "[Version Task] "
+labels: enhancement
+assignees: ''
+---
+
 ## 📦 バージョン実装内容: [vX.X.X]
 
 ### 概要
